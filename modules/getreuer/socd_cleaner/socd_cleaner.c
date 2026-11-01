@@ -45,8 +45,8 @@ static void update_leds(layer_state_t state) {
     STATUS_LED_2((layer == 2));
     STATUS_LED_3((layer == 3));
     STATUS_LED_4(false);
-    STATUS_LED_5((gaming(state) && socd_cleaner_enabled && up_priority));
-    STATUS_LED_6((gaming(state) && socd_cleaner_enabled && !up_priority));
+    STATUS_LED_5((gaming(state) && socd_cleaner_enabled && !up_priority));
+    STATUS_LED_6((gaming(state) && socd_cleaner_enabled && up_priority));
 }
 
 static void reconcile_pair(uint8_t pair_index) {

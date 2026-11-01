@@ -65,14 +65,14 @@ int main(void) {
     event(KC_S, true); event(KC_F, true);
     expect(KC_S, true, KC_F, true);
     tap(SOCDTOG); // Enabling with both held resolves immediately.
-    assert(socd_cleaner_enabled && !leds[3] && !leds[4] && leds[5]);
+    assert(socd_cleaner_enabled && !leds[3] && leds[4] && !leds[5]);
     expect(KC_S, false, KC_F, true);
     event(KC_F, false);
     expect(KC_S, true, KC_F, false);
     event(KC_F, true);
     tap(SOCD_UP); // Horizontal neutral, even when changed mid-hold.
     expect(KC_S, false, KC_F, false);
-    assert(!leds[3] && leds[4] && !leds[5]);
+    assert(!leds[3] && !leds[4] && leds[5]);
     event(KC_F, false);
     expect(KC_S, true, KC_F, false);
     event(KC_SPACE, true); event(KC_D, true);

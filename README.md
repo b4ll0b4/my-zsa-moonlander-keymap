@@ -48,15 +48,15 @@ The six small status indicators are independent of the key backlighting:
 | --- | --- |
 | Left 1 / 2 / 3 | Gaming / left mouse / right mouse layer, as before. |
 | Right 1 (blue) | Unused, off. |
-| Right 2 (green) | SOCD enabled with Up Priority + horizontal Neutral. |
-| Right 3 (red) | SOCD enabled with Last Input Priority. |
+| Right 2 (green) | SOCD enabled with Last Input Priority. |
+| Right 3 (red) | SOCD enabled with Up Priority + horizontal Neutral. |
 | All right indicators off | SOCD disabled. |
 
 Numbering follows the board's `STATUS_LED_1` through `STATUS_LED_6` API, from the
 outer left indicator to the outer right indicator. The module takes ownership of
 these indicators with `MOONLANDER_USER_LEDS`; Oryx still controls key colors.
 The status indicators have fixed colors and support on/off control. Last Input
-Priority uses the red indicator rather than recoloring the blue one.
+Priority uses green; Up Priority uses red.
 
 ## Where to make changes
 
