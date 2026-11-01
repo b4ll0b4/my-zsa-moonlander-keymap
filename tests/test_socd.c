@@ -65,14 +65,14 @@ int main(void) {
     event(KC_S, true); event(KC_F, true);
     expect(KC_S, true, KC_F, true);
     tap(SOCDTOG); // Enabling with both held resolves immediately.
-    assert(socd_cleaner_enabled && leds[3] && !leds[4]);
+    assert(socd_cleaner_enabled && !leds[3] && !leds[4] && leds[5]);
     expect(KC_S, false, KC_F, true);
     event(KC_F, false);
     expect(KC_S, true, KC_F, false);
     event(KC_F, true);
     tap(SOCD_UP); // Horizontal neutral, even when changed mid-hold.
     expect(KC_S, false, KC_F, false);
-    assert(!leds[3] && leds[4]);
+    assert(!leds[3] && leds[4] && !leds[5]);
     event(KC_F, false);
     expect(KC_S, true, KC_F, false);
     event(KC_SPACE, true); event(KC_D, true);
@@ -80,7 +80,7 @@ int main(void) {
     event(KC_SPACE, false);
     expect(KC_SPACE, false, KC_D, true);
     tap(SOCDTOG);
-    assert(!socd_cleaner_enabled && !leds[3] && !leds[4]);
+    assert(!socd_cleaner_enabled && !leds[3] && !leds[4] && !leds[5]);
     expect(KC_SPACE, false, KC_D, true);
     // Releases while disabled must not leave stale state on re-enable.
     release_directions();
@@ -90,15 +90,15 @@ int main(void) {
     event(KC_S, true); event(KC_F, true);
     expect(KC_S, false, KC_F, false);
     layer(0); // Layer exit restores physical holds and disables filtering.
-    assert(!socd_cleaner_enabled && !leds[3] && !leds[4]);
+    assert(!socd_cleaner_enabled && !leds[3] && !leds[4] && !leds[5]);
     expect(KC_S, true, KC_F, true);
     release_directions();
     layer(1);
     assert(!socd_cleaner_enabled);
     layer(2);
-    assert(!leds[0] && leds[1] && !leds[2] && !leds[3] && !leds[4]);
+    assert(!leds[0] && leds[1] && !leds[2] && !leds[3] && !leds[4] && !leds[5]);
     layer(3);
-    assert(!leds[0] && !leds[1] && leds[2] && !leds[3] && !leds[4]);
+    assert(!leds[0] && !leds[1] && leds[2] && !leds[3] && !leds[4] && !leds[5]);
 
     // Exhaustively check press/release ordering for both pairs and both modes.
     const uint8_t pairs[2][2] = {{KC_SPACE, KC_D}, {KC_S, KC_F}};
