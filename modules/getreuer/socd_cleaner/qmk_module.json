@@ -1,0 +1,13 @@
+{
+  "module_name": "Moonlander SOCD Cleaner",
+  "maintainer": "ChristopherRossetti",
+  "license": "Apache-2.0",
+  "url": "https://getreuer.info/posts/keyboards/socd-cleaner",
+  "keycodes": [
+    {"key": "SOCDON"},
+    {"key": "SOCDOFF"},
+    {"key": "SOCDTOG"},
+    {"key": "SOCD_LAST"},
+    {"key": "SOCD_UP"}
+  ]
+}

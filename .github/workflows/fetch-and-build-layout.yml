@@ -3,124 +3,92 @@ name: Fetch and build layout
 on:
   workflow_dispatch:
     inputs:
-      layout_id:
-        description: "Layout id available in URL https://configure.zsa.io/voyager/layouts/[ID_IS_HERE]/latest"
+      oryx_revision:
+        description: "Oryx revision (latest, or a revision ID to rebuild)"
         required: true
-        default: "vr90L"
-      layout_geometry:
-        description: "Keyboard type"
-        type: choice
-        options:
-          - voyager
-          - moonlander/reva
-          - moonlander/revb
-          - ergodox_ez
-          - ergodox_ez/m32u4/glow
-          - ergodox_ez/m32u4/shine
-          - ergodox_ez/stm32
-          - ergodox_ez/stm32/glow
-          - ergodox_ez/stm32/shine
-          - planck_ez
-          - planck_ez/glow
-        default: moonlander/reva
+        default: "latest"
+  push:
+    branches: [main]
+    paths:
+      - "modules/**"
+      - "scripts/**"
+      - "tests/**"
+      - "layout.json"
+      - "Dockerfile"
+      - ".github/workflows/fetch-and-build-layout.yml"
+  pull_request:
+    paths:
+      - "modules/**"
+      - "scripts/**"
+      - "tests/**"
+      - "layout.json"
+      - "Dockerfile"
+      - ".github/workflows/fetch-and-build-layout.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  fetch-and-build-layout:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5
-        with:
-          ref: oryx
+      - uses: actions/checkout@v5
 
-      - name: Download the full history for the merge to work correctly
-        run: git pull --unshallow
-
-      - name: Download layout source
-        id: download-layout-source
+      - name: Check layout preparation and SOCD behavior
         run: |
-          response=$(curl --location 'https://oryx.zsa.io/graphql' --header 'Content-Type: application/json' --data '{"query":"query getLayout($hashId: String!, $revisionId: String!, $geometry: String) {layout(hashId: $hashId, geometry: $geometry, revisionId: $revisionId) {  revision { hashId, qmkVersion, title }}}","variables":{"hashId":"${{ github.event.inputs.layout_id }}","geometry":"${{ github.event.inputs.layout_geometry }}","revisionId":"latest"}}' | jq '.data.layout.revision | [.hashId, .qmkVersion, .title]')
-          hash_id=$(echo "${response}" | jq -r '.[0]')
-          firmware_version=$(printf "%.0f" $(echo "${response}" | jq -r '.[1]'))
-          change_description=$(echo "${response}" | jq -r '.[2]')
-          if [[ -z "${change_description}" ]]; then
-            change_description="latest layout modification made with Oryx"
-          fi
-          
-          curl -L "https://oryx.zsa.io/source/${hash_id}" -o source.zip
-          
-          echo firmware_version=${firmware_version} >> "$GITHUB_OUTPUT"
-          echo change_description=${change_description} >> "$GITHUB_OUTPUT"
+          python3 -m unittest discover -s tests -v
+          mkdir -p .build
+          cc -std=c11 -Wall -Wextra -Werror -Itests/stubs -Imodules/getreuer/socd_cleaner tests/test_socd.c -o .build/test_socd
+          .build/test_socd
 
-      - name: Unzip the source file
-        run: |
-          unzip -oj source.zip '*_source/*' -d ${{ github.event.inputs.layout_id }}
-          rm source.zip
-
-      - name: Commit and Push changes
+      - name: Download Oryx and apply customizations
+        id: layout
         env:
-          CHANGE_DESCRIPTION: ${{ steps.download-layout-source.outputs.change_description }}
+          ORYX_REVISION: ${{ inputs.oryx_revision || 'latest' }}
         run: |
-          git config --local user.name "github-actions"
-          git config --local user.email "github-actions@github.com"
-          git add .
-          printf "✨(oryx): %s\n" "$CHANGE_DESCRIPTION" | git commit -F - || echo "No layout change"
-          git push
+          python3 scripts/prepare_layout.py --revision "$ORYX_REVISION"
+          echo "firmware_ref=$(jq -r .firmware_ref .build/build-info.json)" >> "$GITHUB_OUTPUT"
+          echo "keyboard=$(jq -r .keyboard layout.json)" >> "$GITHUB_OUTPUT"
+          echo "layout_id=$(jq -r .layout_id layout.json)" >> "$GITHUB_OUTPUT"
 
-      - name: Merge Oryx with custom QMK
+      - name: Download official ZSA firmware and install the local module
+        env:
+          FIRMWARE_REF: ${{ steps.layout.outputs.firmware_ref }}
+          KEYBOARD: ${{ steps.layout.outputs.keyboard }}
+          LAYOUT_ID: ${{ steps.layout.outputs.layout_id }}
         run: |
-          git fetch origin main
-          git checkout -B main origin/main
-          git merge -Xignore-all-space oryx
-          git push
+          git clone --depth=1 --branch "$FIRMWARE_REF" --recurse-submodules --shallow-submodules https://github.com/zsa/qmk_firmware.git .build/qmk
+          mkdir -p .build/qmk/modules/getreuer
+          cp -r modules/getreuer/socd_cleaner .build/qmk/modules/getreuer/
+          mkdir -p ".build/qmk/keyboards/zsa/$KEYBOARD/keymaps/$LAYOUT_ID"
+          cp -r .build/layout/. ".build/qmk/keyboards/zsa/$KEYBOARD/keymaps/$LAYOUT_ID/"
+          git -C .build/qmk rev-parse HEAD > .build/qmk-commit.txt
 
-      - name: Update QMK firmware submodule to latest version (${{ steps.download-layout-source.outputs.firmware_version }})
+      - name: Build QMK environment
+        run: docker build -t moonlander-qmk .
+
+      - name: Compile firmware
+        env:
+          KEYBOARD: ${{ steps.layout.outputs.keyboard }}
+          LAYOUT_ID: ${{ steps.layout.outputs.layout_id }}
         run: |
-          git submodule update --init --remote --depth=1 --no-single-branch
-          cd qmk_firmware
-          git checkout -B firmware${{ steps.download-layout-source.outputs.firmware_version }} origin/firmware${{ steps.download-layout-source.outputs.firmware_version }}
-          git submodule update --init --recursive
-          cd ..
-          git add qmk_firmware
-          git commit -m "✨(qmk): Update firmware" || echo "No QMK change"
-          git push
+          docker run --rm -v "$PWD/.build/qmk:/root" moonlander-qmk qmk compile -kb "zsa/$KEYBOARD" -km "$LAYOUT_ID"
+          mkdir -p .build/firmware
+          cp .build/qmk/*.bin .build/firmware/
+          cp -r modules .build/modules
+          cp layout.json .build/layout-settings.json
 
-      - name: Build qmk docker image
-        run: docker build -t qmk .
-
-      - name: Build the layout
-        id: build-layout
-        run: |
-          # Set keyboard directory and make prefix based on firmware version
-          if [ "${{ steps.download-layout-source.outputs.firmware_version }}" -ge 24 ]; then
-            keyboard_directory="qmk_firmware/keyboards/zsa"
-            make_prefix="zsa/"
-          else
-            keyboard_directory="qmk_firmware/keyboards"
-            make_prefix=""
-          fi
-          
-          # Copy layout files to the qmk folder
-          rm -rf ${keyboard_directory}/${{ github.event.inputs.layout_geometry }}/keymaps/${{ github.event.inputs.layout_id }}
-          mkdir -p ${keyboard_directory}/${{ github.event.inputs.layout_geometry }}/keymaps && cp -r ${{ github.event.inputs.layout_id }} "$_"
-          
-          # Build the layout
-          docker run -v ./qmk_firmware:/root --rm qmk /bin/sh -c "
-            qmk setup zsa/qmk_firmware -b firmware${{ steps.download-layout-source.outputs.firmware_version }} -y
-            make ${make_prefix}${{ github.event.inputs.layout_geometry }}:${{ github.event.inputs.layout_id }}
-          "
-          
-          # Find and export built layout          
-          normalized_layout_geometry="$(echo "${{ github.event.inputs.layout_geometry }}" | sed 's/\//_/g')"
-          echo built_layout_file=$(find ./qmk_firmware -maxdepth 1 -type f -regex ".*${normalized_layout_geometry}.*\.\(bin\|hex\)$") >> "$GITHUB_OUTPUT"
-          echo normalized_layout_geometry=${normalized_layout_geometry} >> "$GITHUB_OUTPUT"
-
-      - name: Upload layout
+      - name: Upload firmware and matching sources
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.build-layout.outputs.normalized_layout_geometry }}_${{ github.event.inputs.layout_id }}
-          path: ${{ steps.build-layout.outputs.built_layout_file }}
+          name: moonlander-${{ steps.layout.outputs.layout_id }}
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            .build/firmware/*.bin
+            .build/layout/
+            .build/oryx-source/
+            .build/modules/
+            .build/layout-settings.json
+            .build/build-info.json
+            .build/qmk-commit.txt

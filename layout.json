@@ -1,0 +1,10 @@
+{
+  "layout_id": "vr90L",
+  "keyboard": "moonlander/reva",
+  "gaming_layer": 1,
+  "socd_keys": {
+    "63": "SOCD_LAST",
+    "64": "SOCD_UP",
+    "65": "SOCDTOG"
+  }
+}
