@@ -10,12 +10,13 @@ extern layer_state_t layer_state;
 extern bool leds[6];
 #define QMK_KEYBOARD_H "quantum.h"
 #define ASSERT_COMMUNITY_MODULES_MIN_API_VERSION(a, b, c)
-#define STATUS_LED_1(on) (leds[0] = (on))
-#define STATUS_LED_2(on) (leds[1] = (on))
-#define STATUS_LED_3(on) (leds[2] = (on))
-#define STATUS_LED_4(on) (leds[3] = (on))
-#define STATUS_LED_5(on) (leds[4] = (on))
-#define STATUS_LED_6(on) (leds[5] = (on))
+// Preserve ZSA's unparenthesized cast to catch expression-precedence mistakes.
+#define STATUS_LED_1(on) (leds[0] = (bool)on)
+#define STATUS_LED_2(on) (leds[1] = (bool)on)
+#define STATUS_LED_3(on) (leds[2] = (bool)on)
+#define STATUS_LED_4(on) (leds[3] = (bool)on)
+#define STATUS_LED_5(on) (leds[4] = (bool)on)
+#define STATUS_LED_6(on) (leds[5] = (bool)on)
 uint8_t get_highest_layer(layer_state_t state);
 void add_key(uint8_t code);
 void del_key(uint8_t code);

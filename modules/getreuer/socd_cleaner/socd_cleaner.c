@@ -40,11 +40,12 @@ static bool gaming(layer_state_t state) {
 
 static void update_leds(layer_state_t state) {
     uint8_t layer = get_highest_layer(state);
-    STATUS_LED_1(layer == 1);
-    STATUS_LED_2(layer == 2);
-    STATUS_LED_3(layer == 3);
-    STATUS_LED_4(gaming(state) && socd_cleaner_enabled && !up_priority);
-    STATUS_LED_5(gaming(state) && socd_cleaner_enabled && up_priority);
+    // ZSA's macros cast their argument without enclosing it in parentheses.
+    STATUS_LED_1((layer == 1));
+    STATUS_LED_2((layer == 2));
+    STATUS_LED_3((layer == 3));
+    STATUS_LED_4((gaming(state) && socd_cleaner_enabled && !up_priority));
+    STATUS_LED_5((gaming(state) && socd_cleaner_enabled && up_priority));
     STATUS_LED_6(false);
 }
 
