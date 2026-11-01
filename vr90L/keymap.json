@@ -1,6 +1,0 @@
-{
-    "modules": [
-        "zsa/defaults",
-        "getreuer/socd_cleaner"
-    ]
-}

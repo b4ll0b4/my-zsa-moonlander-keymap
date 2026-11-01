@@ -1,7 +1,0 @@
-#define US_EACU ALGR(KC_E)
-#define US_EURO ALGR(KC_5)
-#define US_AACU ALGR(KC_A)
-#define US_UACU ALGR(KC_U)
-#define US_IACU ALGR(KC_I)
-#define US_OACU ALGR(KC_O)
-#define US_DEG S(ALGR(KC_SCLN))

@@ -5,21 +5,48 @@ the SOCD module stored in this repository, and compiles against the matching
 **official ZSA firmware**. There is no custom firmware fork, firmware submodule,
 or merge between `main` and `oryx` to maintain.
 
+The normal cycle is **Oryx → one GitHub build → Keymapp**. Oryx stores your layout;
+this repository stores the custom SOCD behavior. You do not need to use Git or
+install a local QMK build environment for ordinary layout changes.
+
 ## Everyday use
 
 1. Edit your layout in [Oryx](https://configure.zsa.io/moonlander/layouts/vr90L/latest/0)
    and click **Compile this layout**.
-2. In this repository's **Actions → Fetch and build layout**, click **Run workflow**.
-   Leave the revision as `latest`.
-3. Download the `moonlander-vr90L` artifact, extract it, and flash the `.bin`
-   inside its `firmware` folder using [Keymapp](https://www.zsa.io/flash#flash-keymap).
+2. Open [Actions → Fetch and build layout](https://github.com/b4ll0b4/my-zsa-moonlander-keymap/actions/workflows/fetch-and-build-layout.yml)
+   and click **Run workflow**.
+3. Select **main**, leave **Oryx revision** as **latest**, and start the workflow.
+4. Wait for a successful run, then download its **moonlander-vr90L** artifact
+   from the run's summary page and extract the ZIP.
+5. Open [Keymapp](https://www.zsa.io/flash#flash-keymap), choose the `.bin` inside
+   the extracted **firmware** folder, and follow its flashing instructions.
 
 The Oryx layout must remain public. Flash the binary from the Action to include
 SOCD. An ordinary binary downloaded directly from Oryx contains only Oryx features.
 
+Clicking **Compile this layout** in Oryx saves the new revision but does not
+start the GitHub build. Run the Action manually after your Oryx changes. A
+successful Action produces a downloadable binary; flashing it remains manual.
+
 The Action also runs when custom code changes are pushed to `main`, and on pull
 requests affecting the build. It has read-only repository permissions and never
 commits exports, updates a submodule, or pushes branch merges.
+
+## What happens during a build
+
+Every run automatically:
+
+1. Downloads your requested Oryx revision (`latest` by default).
+2. Inserts the three SOCD control keycodes into their reserved gaming-layer slots
+   and enables the SOCD module stored in this repository.
+3. Downloads the matching official ZSA firmware and its library dependencies.
+4. Runs the preparation and SOCD behavior checks, then compiles the Moonlander `.bin`.
+5. Uploads the firmware, raw Oryx export, prepared layout, custom module, and build
+   metadata together as one artifact.
+
+The generated layout is included in the artifact instead of being committed back
+to this repository. This keeps Oryx's generated files separate from the custom
+module, so ordinary Oryx edits do not require Git merges or conflict resolution.
 
 ## SOCD controls and indicators
 
@@ -66,7 +93,6 @@ Priority uses green; Up Priority uses red.
 | `modules/getreuer/socd_cleaner/` | SOCD behavior, direction pairs, modes, and status LEDs. |
 | `scripts/prepare_layout.py` | Download the Oryx export and insert the three controls. |
 | `.github/workflows/fetch-and-build-layout.yml` | Download official firmware, compile, and upload the result. |
-| `vr90L/` | Historical merged source, retained for reference; not used by the new build. |
 
 Keep the three reserved control positions **blank/transparent in Oryx**. The
 script inserts their keycodes automatically and stops with an error if a slot
@@ -74,10 +100,13 @@ has been assigned another function. Other keys, macros, tap dances, configuratio
 and RGB code come from the fresh export. Custom code lives in the module and
 does not need edits inside Oryx's generated functions.
 
-The old `oryx` branch and the old firmware fork can remain on GitHub as archives.
-Existing local files in `qmk_firmware/` are retained and ignored; the build uses a
-temporary official checkout under `.build/qmk/`. ZSA's internal firmware library
-submodules are downloaded automatically during the build.
+Use Oryx for key bindings, tap dances, macros, and key colors. Change the module
+for custom SOCD behavior or status indicators. Pushing changes to custom code or
+build files on `main` starts a build automatically.
+
+The build uses a temporary official firmware checkout under `.build/qmk/`.
+ZSA's internal firmware library submodules are downloaded automatically during
+the build; there are no firmware submodules to maintain in this repository.
 
 ## Checking or rebuilding
 

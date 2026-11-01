@@ -2,5 +2,3 @@
 *.iml
 .build/
 __pycache__/
-# Legacy local firmware checkout; builds now download official ZSA firmware.
-/qmk_firmware/
