@@ -72,7 +72,8 @@ jobs:
           KEYBOARD: ${{ steps.layout.outputs.keyboard }}
           LAYOUT_ID: ${{ steps.layout.outputs.layout_id }}
         run: |
-          docker run --rm -v "$PWD/.build/qmk:/root" moonlander-qmk qmk compile -kb "zsa/$KEYBOARD" -km "$LAYOUT_ID"
+          # Match the checkout owner so Git accepts the firmware and library repos.
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/.build/qmk:/root" moonlander-qmk qmk compile -kb "zsa/$KEYBOARD" -km "$LAYOUT_ID"
           mkdir -p .build/firmware
           cp .build/qmk/*.bin .build/firmware/
           cp -r modules .build/modules
